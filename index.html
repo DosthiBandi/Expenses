@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Daily Expense Tracker</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100%;
+        background-color: #f4f6f9;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      
+      .container {
+        width: 100%;
+        max-width: 650px;
+        box-sizing: border-box;
+        padding: 24px;
+        margin: 20px auto;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        background: #ffffff;
+      }
+
+      h2 {
+        color: #0f172a;
+        margin-top: 0;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 12px;
+        font-size: 22px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 16px;
+      }
+
+      label {
+        font-weight: 600;
+        margin-bottom: 6px;
+        font-size: 14px;
+        color: #334155;
+      }
+
+      input[type="text"], 
+      input[type="number"], 
+      input[type="date"], 
+      select, 
+      textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        font-size: 15px;
+        box-sizing: border-box;
+        background-color: #f8fafc;
+      }
+
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: #0284c7;
+        background-color: #ffffff;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+      }
+
+      .file-upload-box {
+        border: 2px dashed #cbd5e0;
+        padding: 16px;
+        border-radius: 8px;
+        text-align: center;
+        background-color: #f8fafc;
+        cursor: pointer;
+      }
+
+      .file-upload-box:hover {
+        border-color: #0284c7;
+        background-color: #f0f9ff;
+      }
+
+      .file-preview {
+        margin-top: 10px;
+        font-size: 13px;
+        color: #0369a1;
+        font-weight: 600;
+        word-break: break-all;
+      }
+
+      button {
+        padding: 14px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+
+      .submit-btn {
+        background-color: #0284c7;
+        color: white;
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      .submit-btn:hover {
+        background-color: #0369a1;
+      }
+
+      .submit-btn:disabled {
+        background-color: #94a3b8;
+        cursor: not-allowed;
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          margin: 0;
+          border-radius: 0;
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Daily Expense Entry</h2>
+      <form id="expenseForm">
+        
+        <div class="form-group">
+          <label for="expenseDate">Date *</label>
+          <input type="date" id="expenseDate" required>
+        </div>
+
+        <div class="form-group">
+          <label for="storeName">Store / Vendor Name *</label>
+          <input type="text" id="storeName" placeholder="e.g., Restaurant Depot, Costco, Home Depot" required>
+        </div>
+
+        <div class="form-group">
+          <label for="amount">Total Amount ($) *</label>
+          <input type="number" id="amount" step="0.01" min="0" placeholder="0.00" required>
+        </div>
+
+        <div class="form-group">
+          <label for="category">Category</label>
+          <select id="category">
+            <option value="Groceries / Inventory">Groceries / Inventory</option>
+            <option value="Supplies & Packaging">Supplies & Packaging</option>
+            <option value="Gas / Transportation">Gas / Transportation</option>
+            <option value="Utilities & Maintenance">Utilities & Maintenance</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Other Expenses">Other Expenses</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="paymentMethod">Payment Method</label>
+          <select id="paymentMethod">
+            <option value="Business Credit Card">Business Credit Card</option>
+            <option value="Business Debit Card">Business Debit Card</option>
+            <option value="Cash">Cash</option>
+            <option value="Personal Account (Reimburse)">Personal Account (Reimburse)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes / Items Purchased (Optional)</label>
+          <textarea id="notes" rows="3" placeholder="Additional details or itemized breakdown..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Attach Receipt Photo (Optional)</label>
+          <div class="file-upload-box" onclick="document.getElementById('receiptFile').click()">
+            <span>📷 Tap to take photo or choose file</span>
+            <input type="file" id="receiptFile" accept="image/*,application/pdf" capture="environment" style="display:none;" onchange="handleFileSelect(this)">
+            <div id="filePreview" class="file-preview"></div>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Save Expense Entry</button>
+      </form>
+    </div>
+
+    <script>
+      // Insert your Google Apps Script Web App Deployment URL here
+      const SCRIPT_URL = "YOUR_EXPENSE_APPS_SCRIPT_EXEC_URL";
+
+      let selectedFileBase64 = "";
+      let selectedFileName = "";
+      let selectedMimeType = "";
+
+      // Set default date picker to today
+      document.getElementById('expenseDate').valueAsDate = new Date();
+
+      function handleFileSelect(input) {
+        const file = input.files[0];
+        const previewDiv = document.getElementById('filePreview');
+        
+        if (file) {
+          selectedFileName = file.name;
+          selectedMimeType = file.type;
+          previewDiv.innerText = "Selected File: " + file.name + " (" + Math.round(file.size / 1024) + " KB)";
+
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            // Extract raw base64 string
+            selectedFileBase64 = e.target.result.split(',')[1];
+          };
+          reader.readAsDataURL(file);
+        } else {
+          selectedFileBase64 = "";
+          selectedFileName = "";
+          selectedMimeType = "";
+          previewDiv.innerText = "";
+        }
+      }
+
+      document.getElementById('expenseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Saving & Uploading Receipt...";
+
+        const payload = {
+          expenseDate: document.getElementById('expenseDate').value,
+          storeName: document.getElementById('storeName').value,
+          amount: document.getElementById('amount').value,
+          category: document.getElementById('category').value,
+          paymentMethod: document.getElementById('paymentMethod').value,
+          notes: document.getElementById('notes').value,
+          receiptBase64: selectedFileBase64,
+          fileName: selectedFileName,
+          mimeType: selectedMimeType
+        };
+
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain'
+          },
+          body: JSON.stringify(payload)
+        })
+        .then(() => {
+          alert("Expense logged successfully!");
+          document.getElementById('expenseForm').reset();
+          document.getElementById('expenseDate').valueAsDate = new Date();
+          document.getElementById('filePreview').innerText = "";
+          selectedFileBase64 = "";
+          selectedFileName = "";
+          selectedMimeType = "";
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Save Expense Entry";
+        })
+        .catch(err => {
+          alert("Error saving expense. Please try again.");
+          console.error("Submission error:", err);
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Save Expense Entry";
+        });
+      });
+    </script>
+  </body>
+</html>
